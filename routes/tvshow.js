@@ -3,7 +3,14 @@ const express = require("express");
 const router = express.Router();
 
 // import the Movie model
-const Tvshows = require("../models/tvshow");
+const {
+  getShows,
+  getShow,
+  addShow,
+  updateShow,
+  deleteShow,
+} = require("../controllers/tvshow");
+
 
 /* 
   Routes for movies
@@ -25,39 +32,9 @@ router.get("/", async (req, res) => {
   const seasons = req.query.seasons;
   const genre = req.query.genre;
   const rating = req.query.rating;
-
-  let filter = {};
-  if (title) {
-    filter.title = title;
-  }
-
-  if (creator) {
-    filter.creator = creator;
-  }
-
-  if (premiere_year) {
-    filter.premiere_year = { $gt: premiere_year };
-  }
-
-  if (end_year) {
-    filter.end_year = end_year;
-  }
-
-  if (seasons) {
-    filter.seasons = seasons;
-  }
-
-  if (genre) {
-    filter.genre = genre;
-  }
-
-  if (rating) {
-    filter.rating = { $gt: rating };
-  }
-
   // load the movies data from Mongodb
-  const tvshows = await Tvshows.find(filter).sort({ _id: -1 });
-  res.send(tvshows);
+  const tvshows = await getShows(title, creator, premiere_year, end_year, seasons, genre, rating);
+  res.status(200).send(tvshows);
 });
 
 // GET /movies/:id - get a specific movie
@@ -65,8 +42,8 @@ router.get("/:id", async (req, res) => {
   // retrieve id from params
   const id = req.params.id;
   // load the movie data based on id
-  const tvshows = await Tvshows.findById(id);
-  res.send(tvshows);
+  const tvshows = await getShow(id);
+  res.status(200).send(tvshows);
 });
 
 /* 
@@ -102,22 +79,11 @@ router.post("/", async (req, res) => {
         message: "All the fields are required",
       });
     }
-
-    // create new movie
-    const newTvshow = new Tvshows({
-      title: title,
-      creator: creator,
-      premiere_year: premiere_year,
-      end_year: end_year,
-      seasons: seasons,
-      genre: genre,
-      rating: rating,
-    });
-    // save the new movie into mongodb
-    await newTvshow.save(); // clicking the "save" button
-
-    res.status(200).send(newTvshow);
+     res
+     .status(200)
+     .send(await addShow(title, creator, premiere_year, end_year, seasons, genre, rating));
   } catch (error) {
+    console.log(error)
     res.status(400).send({ message: "Unknown error" });
   }
 });
@@ -136,6 +102,7 @@ router.put("/:id", async (req, res) => {
 
     // check error - make sure all the fields are not empty
     if (
+
       !title ||
       !creator ||
       !premiere_year ||
@@ -148,25 +115,11 @@ router.put("/:id", async (req, res) => {
         message: "All the fields are required",
       });
     }
-
-    const updatedTvshow = await Tvshows.findByIdAndUpdate(
-      id,
-      {
-        title: title,
-        creator: creator,
-        premiere_year: premiere_year,
-        end_year: end_year,
-        seasons: seasons,
-        genre: genre,
-        rating: rating,
-      },
-      {
-        new: true, // return the updated data
-      }
-    );
-
-    res.status(200).send(updatedTvshow);
+    res
+    .status(200)
+    .send(await updateShow(id, title, creator, premiere_year, end_year, seasons, genre, rating));
   } catch (error) {
+    console.log(error)
     res.status(400).send({ message: "Unknown error" });
   }
 });
@@ -176,10 +129,10 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;
     // delete the movie
-    await Tvshows.findByIdAndDelete(id);
+    await deleteShow(id)
 
     res.status(200).send({
-      message: `Movie with the ID of ${id} has been deleted`,
+      message: `Show with the ID of ${id} has been deleted`,
     });
   } catch (error) {
     res.status(400).send({ message: "Unknown error" });
